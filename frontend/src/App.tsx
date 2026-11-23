@@ -55,8 +55,8 @@ const navigation = [
   { name: "Overview", icon: LayoutDashboard, href: "#overview" },
   { name: "Air Quality", icon: Wind, href: "#air-quality" },
   { name: "Family Profiles", icon: Users, href: "#family" },
-  { name: "Daily Planner", icon: CalendarDays, href: "#planner" },
-  { name: "Indoor Air", icon: Home, href: "#indoor" },
+  { name: "Daily Planner", icon: CalendarDays, href: "##planner-details" },
+  { name: "Indoor Air", icon: Home, href: "#indoor-details" },
   { name: "Route Planner", icon: Map, href: "#routes" },
   { name: "AI Assistant", icon: MessageCircle, href: "#assistant" }
 ];
