@@ -82,19 +82,14 @@ function Sidebar() {
   return (
     <>
       <button
-        className="mobile-menu"
-        onClick={() => setMobileOpen(!mobileOpen)}
-        aria-label="Toggle navigation"
-      >
-        {mobileOpen ? <X /> : <Menu />}
-      </button>
-
-      {mobileOpen && (
-        <div
-          className="mobile-overlay"
-          onClick={() => setMobileOpen(false)}
-        />
-      )}
+  type="button"
+  className="mobile-menu"
+  onClick={() => setMobileOpen((previous) => !previous)}
+  aria-label="Toggle navigation"
+  aria-expanded={mobileOpen}
+>
+  {mobileOpen ? <X /> : <Menu />}
+</button>
 
       <aside className={`sidebar ${mobileOpen ? "sidebar-open" : ""}`}>
         <a className="brand" href="#overview">
