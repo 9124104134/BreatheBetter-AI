@@ -1656,4 +1656,40 @@ button {
   }
 }
 
+/* -------------------- 24-HOUR FORECAST SUMMARY -------------------- */
+
+.forecast-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.forecast-summary > div {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 14px;
+  background: #f4f8f5;
+  border: 1px solid #e7eee9;
+  border-radius: 12px;
+}
+
+.forecast-summary strong {
+  color: #218667;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.forecast-summary span {
+  color: #7c8981;
+  font-size: 11px;
+}
+
+@media (max-width: 600px) {
+  .forecast-summary {
+    grid-template-columns: 1fr;
+  }
+}
+
 
