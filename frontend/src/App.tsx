@@ -44,6 +44,9 @@ import {
 const AIR_QUALITY_API_URL =
   "https://breathebetter-ai.onrender.com/api/air-quality?latitude=13.0827&longitude=80.2707";
 
+const AIR_QUALITY_FORECAST_API_URL =
+  "https://breathebetter-ai.onrender.com/api/air-quality/forecast?latitude=13.0827&longitude=80.2707";
+
 // -------------------- API TYPES --------------------
 
 type PollutantKey =
@@ -98,19 +101,60 @@ type AirQualityResponse = {
   notes?: string[];
 };
 
-// -------------------- SAMPLE TREND DATA --------------------
-// Historical trend integration will be added separately.
+type ForecastItem = {
+  timestamp: string;
+  aqi_estimate: {
+    aqi: number | null;
+    aqi_display: string;
+    category: string | null;
+    dominant_pollutant: string | null;
+    valid_pollutant_count: number;
+    minimum_pollutants_required: number;
+  };
+  pollutant_averages: Partial<
+    Record<PollutantKey, number | null>
+  >;
+  sub_indices: Partial<
+    Record<
+      PollutantKey,
+      {
+        name: string;
+        average_concentration: number;
+        unit: string;
+        sub_index: number;
+        category: string;
+      }
+    >
+  >;
+};
 
-const trendData = [
-  { time: "6 AM", aqi: 112 },
-  { time: "8 AM", aqi: 138 },
-  { time: "10 AM", aqi: 125 },
-  { time: "12 PM", aqi: 151 },
-  { time: "2 PM", aqi: 143 },
-  { time: "4 PM", aqi: 156 },
-  { time: "6 PM", aqi: 148 },
-  { time: "8 PM", aqi: 132 }
-];
+type AirQualityForecastResponse = {
+  location: string;
+  latitude: number;
+  longitude: number;
+  data_type: string;
+  source: string;
+  attribution: string;
+  forecast_period: string;
+  averaging_method: string;
+  notes: string[];
+  forecast: ForecastItem[];
+};
+
+type FamilyMember = {
+  id: number;
+  name: string;
+  group: string;
+  activity: string;
+};
+
+type NotificationItem = {
+  id: number;
+  title: string;
+  message: string;
+  time: string;
+  unread: boolean;
+};
 
 // -------------------- NAVIGATION --------------------
 
@@ -150,20 +194,17 @@ const pollutantConfig = [
   }
 ] as const;
 
-type FamilyMember = {
-  id: number;
-  name: string;
-  group: string;
-  activity: string;
-};
+// -------------------- HELPERS --------------------
 
-type NotificationItem = {
-  id: number;
-  title: string;
-  message: string;
-  time: string;
-  unread: boolean;
-};
+function formatForecastTime(timestamp: string) {
+  const date = new Date(`${timestamp}:00+05:30`);
+
+  return date.toLocaleTimeString("en-IN", {
+    hour: "numeric",
+    hour12: true,
+    timeZone: "Asia/Kolkata"
+  });
+}
 
 // -------------------- SIDEBAR --------------------
 
@@ -662,79 +703,155 @@ function PollutantSection({
   );
 }
 
-// -------------------- TREND CHART --------------------
+// -------------------- 24-HOUR FORECAST --------------------
 
-function TrendChart() {
+function TrendChart({
+  forecast,
+  loading,
+  error
+}: {
+  forecast: ForecastItem[];
+  loading: boolean;
+  error: string;
+}) {
+  const chartData = forecast
+    .filter((item) => item.aqi_estimate.aqi !== null)
+    .map((item) => ({
+      time: formatForecastTime(item.timestamp),
+      aqi: item.aqi_estimate.aqi as number,
+      category: item.aqi_estimate.category ?? "Unavailable",
+      dominant: item.aqi_estimate.dominant_pollutant ?? "Unavailable"
+    }));
+
+  const validValues = chartData.map((item) => item.aqi);
+
+  const minimumAQI =
+    validValues.length > 0
+      ? Math.max(0, Math.floor(Math.min(...validValues) - 10))
+      : 0;
+
+  const maximumAQI =
+    validValues.length > 0
+      ? Math.ceil(Math.max(...validValues) + 10)
+      : 100;
+
   return (
     <section className="panel trend-panel" id="trends">
       <div className="section-heading">
         <div>
-          <h3>Air Quality Trends</h3>
-          <p>Illustrative AQI pattern throughout the day</p>
+          <h3>24-Hour Air Quality Forecast</h3>
+          <p>Expected AQI changes throughout the next 24 hours</p>
         </div>
 
-        <span className="chart-period">Today</span>
+        <span className="chart-period">Next 24 Hours</span>
       </div>
 
-      <div className="chart-area">
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={trendData}>
-            <defs>
-              <linearGradient
-                id="aqiGradient"
-                x1="0"
-                y1="0"
-                x2="0"
-                y2="1"
-              >
-                <stop
-                  offset="0%"
-                  stopColor="#269B79"
-                  stopOpacity={0.25}
+      {loading ? (
+        <div className="chart-area">
+          <p>Loading air-quality forecast...</p>
+        </div>
+      ) : error ? (
+        <div className="chart-area">
+          <p>{error}</p>
+        </div>
+      ) : chartData.length === 0 ? (
+        <div className="chart-area">
+          <p>No valid forecast data is currently available.</p>
+        </div>
+      ) : (
+        <>
+          <div className="chart-area">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={chartData}>
+                <defs>
+                  <linearGradient
+                    id="aqiGradient"
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
+                  >
+                    <stop
+                      offset="0%"
+                      stopColor="#269B79"
+                      stopOpacity={0.25}
+                    />
+                    <stop
+                      offset="95%"
+                      stopColor="#269B79"
+                      stopOpacity={0.01}
+                    />
+                  </linearGradient>
+                </defs>
+
+                <CartesianGrid
+                  strokeDasharray="4 4"
+                  vertical={false}
+                  stroke="#E9EFEB"
                 />
-                <stop
-                  offset="95%"
-                  stopColor="#269B79"
-                  stopOpacity={0.01}
+
+                <XAxis
+                  dataKey="time"
+                  axisLine={false}
+                  tickLine={false}
+                  interval="preserveStartEnd"
+                  tick={{ fill: "#89958E", fontSize: 11 }}
                 />
-              </linearGradient>
-            </defs>
 
-            <CartesianGrid
-              strokeDasharray="4 4"
-              vertical={false}
-              stroke="#E9EFEB"
-            />
+                <YAxis
+                  domain={[minimumAQI, maximumAQI]}
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: "#89958E", fontSize: 11 }}
+                />
 
-            <XAxis
-              dataKey="time"
-              axisLine={false}
-              tickLine={false}
-              tick={{ fill: "#89958E", fontSize: 11 }}
-            />
+                <Tooltip
+                  formatter={(value) => [
+                    `${value} AQI`,
+                    "Forecast AQI"
+                  ]}
+                  labelFormatter={(label) => `Time: ${label}`}
+                />
 
-            <YAxis
-              axisLine={false}
-              tickLine={false}
-              tick={{ fill: "#89958E", fontSize: 11 }}
-            />
+                <Area
+                  type="monotone"
+                  dataKey="aqi"
+                  stroke="#269B79"
+                  strokeWidth={3}
+                  fill="url(#aqiGradient)"
+                  activeDot={{ r: 6 }}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
 
-            <Tooltip />
+          <div className="forecast-summary">
+            <div>
+              <strong>{chartData[0].aqi}</strong>
+              <span>First forecast AQI</span>
+            </div>
 
-            <Area
-              type="monotone"
-              dataKey="aqi"
-              stroke="#269B79"
-              strokeWidth={3}
-              fill="url(#aqiGradient)"
-              activeDot={{ r: 6 }}
-            />
-          </AreaChart>
-        </ResponsiveContainer>
-      </div>
+            <div>
+              <strong>
+                {Math.min(...validValues)}
+              </strong>
+              <span>Lowest forecast AQI</span>
+            </div>
+
+            <div>
+              <strong>
+                {Math.max(...validValues)}
+              </strong>
+              <span>Highest forecast AQI</span>
+            </div>
+          </div>
+        </>
+      )}
 
       <p className="chart-note">
-        Demo visualization only. Historical observations will be connected later.
+        Forecast source: Open-Meteo Air Quality API (CAMS).
+        Model-based estimates, not official CPCB station forecasts.
+        Each point represents a forecast averaging window.
       </p>
     </section>
   );
@@ -1272,6 +1389,17 @@ function App() {
 
   const [refreshKey, setRefreshKey] = useState(0);
 
+  const [forecast, setForecast] =
+    useState<ForecastItem[]>([]);
+
+  const [forecastLoading, setForecastLoading] =
+    useState(true);
+
+  const [forecastError, setForecastError] =
+    useState("");
+
+  // -------------------- CURRENT AQI FETCH --------------------
+
   useEffect(() => {
     let active = true;
 
@@ -1338,6 +1466,63 @@ function App() {
     };
   }, [refreshKey]);
 
+  // -------------------- 24-HOUR FORECAST FETCH --------------------
+
+  useEffect(() => {
+    let active = true;
+
+    async function fetchForecast() {
+      setForecastLoading(true);
+      setForecastError("");
+
+      try {
+        const response = await fetch(
+          AIR_QUALITY_FORECAST_API_URL
+        );
+
+        if (!response.ok) {
+          throw new Error(
+            `Forecast API returned HTTP ${response.status}`
+          );
+        }
+
+        const result =
+          (await response.json()) as AirQualityForecastResponse;
+
+        if (!Array.isArray(result.forecast)) {
+          throw new Error(
+            "The forecast API returned an unexpected response."
+          );
+        }
+
+        if (active) {
+          setForecast(result.forecast);
+          setForecastError("");
+        }
+      } catch (error) {
+        if (active) {
+          setForecastError(
+            error instanceof Error
+              ? error.message
+              : "Unable to fetch air-quality forecast."
+          );
+        }
+      } finally {
+        if (active) {
+          setForecastLoading(false);
+        }
+      }
+    }
+
+    fetchForecast();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  // -------------------- DASHBOARD --------------------
+
   return (
     <div className="app-layout">
       <Sidebar />
@@ -1383,7 +1568,12 @@ function App() {
           />
 
           <div className="insights-grid">
-            <TrendChart />
+            <TrendChart
+              forecast={forecast}
+              loading={forecastLoading}
+              error={forecastError}
+            />
+
             <Recommendations />
           </div>
 
