@@ -1,4 +1,17 @@
+from datetime import datetime
+from zoneinfo import ZoneInfo
+from math import floor, isfinite
 
+from fastapi import FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
+import httpx
+
+
+app = FastAPI(
+    title="BreatheBetter AI API",
+    description="Urban Air Quality Assistant for healthier daily routines",
+    version="2.0.0"
+)
 def calculate_forecast_average(values, start_index, window_size, minimum_values):
     """Calculate an average using upcoming forecast hours."""
 
