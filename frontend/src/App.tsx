@@ -25,7 +25,8 @@ import {
   Plus,
   Heart,
   Navigation,
-  CheckCircle2
+  CheckCircle2,
+  RefreshCw
 } from "lucide-react";
 
 import {
@@ -41,7 +42,7 @@ import {
 // -------------------- API CONFIGURATION --------------------
 
 const AIR_QUALITY_API_URL =
-  "https://breathebetter-ai.onrender.com/api/air-quality";
+  "https://breathebetter-ai.onrender.com/api/air-quality?latitude=13.0827&longitude=80.2707";
 
 // -------------------- API TYPES --------------------
 
@@ -476,11 +477,13 @@ function Header() {
 function AQICard({
   data,
   loading,
-  error
+  error,
+  onRefresh
 }: {
   data: AirQualityResponse | null;
   loading: boolean;
   error: string;
+  onRefresh: () => void;
 }) {
   const aqi = data?.aqi_estimate;
   const aqiValue = aqi?.aqi_display ?? "—";
@@ -497,6 +500,19 @@ function AQICard({
           <span className="live-dot" />
           {loading ? "FETCHING AIR QUALITY" : "LIVE MODEL DATA"}
         </div>
+
+        <button
+          type="button"
+          className="primary-button"
+          onClick={onRefresh}
+          disabled={loading}
+        >
+          <RefreshCw
+            size={16}
+            className={loading ? "refresh-spinning" : ""}
+          />
+          {loading ? "Refreshing..." : "Refresh Air Quality"}
+        </button>
 
         <h3>Current Air Quality</h3>
 
@@ -523,7 +539,7 @@ function AQICard({
           {loading
             ? "Fetching the latest available pollutant information."
             : error
-              ? "Air-quality data could not be retrieved. Please try again later."
+              ? "Air-quality data could not be retrieved. Please try again."
               : !aqi || aqi.aqi === null
                 ? "There is insufficient pollutant data to calculate an AQI estimate."
                 : `The dominant pollutant is ${
@@ -1254,49 +1270,73 @@ function App() {
   const [airQualityError, setAirQualityError] =
     useState("");
 
+  const [refreshKey, setRefreshKey] = useState(0);
+
   useEffect(() => {
     let active = true;
 
     async function fetchAirQuality() {
-      try {
-        setAirQualityLoading(true);
-        setAirQualityError("");
+      setAirQualityLoading(true);
+      setAirQualityError("");
 
-        const response = await fetch(AIR_QUALITY_API_URL);
+      let lastError = "Unable to fetch air-quality data.";
 
-        if (!response.ok) {
-          throw new Error(
-            `Air-quality API returned HTTP ${response.status}`
-          );
-        }
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        if (!active) return;
 
-        const result =
-          (await response.json()) as AirQualityResponse;
+        try {
+          const response = await fetch(AIR_QUALITY_API_URL);
 
-        if (active) {
-          setAirQuality(result);
-        }
-      } catch (error) {
-        if (active) {
-          setAirQualityError(
+          if (!response.ok) {
+            throw new Error(
+              `Air-quality API returned HTTP ${response.status}`
+            );
+          }
+
+          const result =
+            (await response.json()) as AirQualityResponse;
+
+          if (!result.aqi_estimate || !result.current_pollutants) {
+            throw new Error("The API returned an unexpected response.");
+          }
+
+          if (active) {
+            setAirQuality(result);
+            setAirQualityError("");
+          }
+
+          return;
+        } catch (error) {
+          lastError =
             error instanceof Error
               ? error.message
-              : "Unable to fetch air-quality data."
-          );
+              : "Unable to fetch air-quality data.";
+
+          if (attempt < 3 && active) {
+            await new Promise((resolve) =>
+              setTimeout(resolve, 5000)
+            );
+          }
         }
-      } finally {
-        if (active) {
-          setAirQualityLoading(false);
-        }
+      }
+
+      if (active) {
+        setAirQualityError(
+          `${lastError}. Please try refreshing the data.`
+        );
       }
     }
 
-    fetchAirQuality();
+    fetchAirQuality().finally(() => {
+      if (active) {
+        setAirQualityLoading(false);
+      }
+    });
 
     return () => {
       active = false;
     };
-  }, []);
+  }, [refreshKey]);
 
   return (
     <div className="app-layout">
@@ -1332,6 +1372,9 @@ function App() {
             data={airQuality}
             loading={airQualityLoading}
             error={airQualityError}
+            onRefresh={() =>
+              setRefreshKey((current) => current + 1)
+            }
           />
 
           <PollutantSection
