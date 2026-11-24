@@ -1,5 +1,5 @@
 
-import { useState, type FormEvent } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import {
   Activity,
   Wind,
@@ -38,7 +38,67 @@ import {
   ResponsiveContainer
 } from "recharts";
 
-// -------------------- SAMPLE DATA --------------------
+// -------------------- API CONFIGURATION --------------------
+
+const AIR_QUALITY_API_URL =
+  "https://breathebetter-ai.onrender.com/api/air-quality";
+
+// -------------------- API TYPES --------------------
+
+type PollutantKey =
+  | "pm2_5"
+  | "pm10"
+  | "carbon_monoxide"
+  | "nitrogen_dioxide"
+  | "sulphur_dioxide"
+  | "ozone";
+
+type AirQualityResponse = {
+  location?: string;
+  latitude: number;
+  longitude: number;
+  timestamp: string;
+  data_type: string;
+  source: string;
+  current_pollutants: Partial<
+    Record<PollutantKey, number | null>
+  >;
+  pollutant_averages: Partial<
+    Record<PollutantKey, number | null>
+  >;
+  sub_indices: Partial<
+    Record<
+      PollutantKey,
+      {
+        name: string;
+        average_concentration: number;
+        unit: string;
+        sub_index: number;
+        category: string;
+      }
+    >
+  >;
+  aqi_estimate: {
+    aqi: number | null;
+    aqi_display: string;
+    category: string | null;
+    dominant_pollutant: string | null;
+    valid_pollutant_count: number;
+    minimum_pollutants_required: number;
+  };
+  data_coverage?: Record<
+    string,
+    {
+      valid_hours?: number;
+      required_hours?: number;
+      sufficient?: boolean;
+    }
+  >;
+  notes?: string[];
+};
+
+// -------------------- SAMPLE TREND DATA --------------------
+// Historical trend integration will be added separately.
 
 const trendData = [
   { time: "6 AM", aqi: 112 },
@@ -51,6 +111,8 @@ const trendData = [
   { time: "8 PM", aqi: 132 }
 ];
 
+// -------------------- NAVIGATION --------------------
+
 const navigation = [
   { name: "Overview", icon: LayoutDashboard, href: "#overview" },
   { name: "Air Quality", icon: Wind, href: "#air-quality" },
@@ -61,12 +123,31 @@ const navigation = [
   { name: "AI Assistant", icon: MessageCircle, href: "#assistant" }
 ];
 
-const pollutants = [
-  { name: "PM2.5", value: "48", unit: "µg/m³", status: "Elevated", icon: Wind },
-  { name: "PM10", value: "82", unit: "µg/m³", status: "Moderate", icon: Activity },
-  { name: "NO₂", value: "24", unit: "µg/m³", status: "Good", icon: Cloud },
-  { name: "O₃", value: "31", unit: "µg/m³", status: "Good", icon: Sun }
-];
+// -------------------- POLLUTANT CONFIGURATION --------------------
+
+const pollutantConfig = [
+  { key: "pm2_5", name: "PM2.5", unit: "µg/m³", icon: Wind },
+  { key: "pm10", name: "PM10", unit: "µg/m³", icon: Activity },
+  {
+    key: "nitrogen_dioxide",
+    name: "NO₂",
+    unit: "µg/m³",
+    icon: Cloud
+  },
+  { key: "ozone", name: "O₃", unit: "µg/m³", icon: Sun },
+  {
+    key: "carbon_monoxide",
+    name: "CO",
+    unit: "µg/m³",
+    icon: Activity
+  },
+  {
+    key: "sulphur_dioxide",
+    name: "SO₂",
+    unit: "µg/m³",
+    icon: Wind
+  }
+] as const;
 
 type FamilyMember = {
   id: number;
@@ -280,12 +361,13 @@ function Header() {
           />
         </label>
 
-        {/* Notifications */}
         <div className="notification-wrapper">
           <button
             type="button"
             className="icon-button notification-button"
-            aria-label={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ""}`}
+            aria-label={`Notifications${
+              unreadCount > 0 ? `, ${unreadCount} unread` : ""
+            }`}
             aria-expanded={notificationsOpen}
             onClick={() =>
               setNotificationsOpen((previous) => !previous)
@@ -376,7 +458,6 @@ function Header() {
           )}
         </div>
 
-        {/* Clickable top-right profile */}
         <a
           href="#family"
           className="avatar profile-avatar"
@@ -392,53 +473,99 @@ function Header() {
 
 // -------------------- AQI OVERVIEW --------------------
 
-function AQICard() {
+function AQICard({
+  data,
+  loading,
+  error
+}: {
+  data: AirQualityResponse | null;
+  loading: boolean;
+  error: string;
+}) {
+  const aqi = data?.aqi_estimate;
+  const aqiValue = aqi?.aqi_display ?? "—";
+  const category = aqi?.category ?? "Unavailable";
+
+  const timestamp = data?.timestamp
+    ? `${data.timestamp.replace("T", " ")} (IST)`
+    : "Not available";
+
   return (
     <section className="aqi-card" id="overview">
       <div className="aqi-card-content">
         <div className="live-label">
           <span className="live-dot" />
-          SAMPLE DASHBOARD DATA
+          {loading ? "FETCHING AIR QUALITY" : "LIVE MODEL DATA"}
         </div>
 
         <h3>Current Air Quality</h3>
+
         <p className="aqi-description">
           Your air quality overview for Chennai
         </p>
 
         <div className="aqi-score">
-          <span>156</span>
+          <span>{loading ? "..." : aqiValue}</span>
+
           <div>
-            <span className="aqi-status">Moderate</span>
-            <p>Illustrative AQI value</p>
+            <span className="aqi-status">{category}</span>
+            <p>
+              {data
+                ? "Estimated AQI value"
+                : loading
+                  ? "Fetching data..."
+                  : "AQI unavailable"}
+            </p>
           </div>
         </div>
 
         <p className="aqi-message">
-          Sensitive individuals should consider reducing prolonged or heavy
-          outdoor exertion.
+          {loading
+            ? "Fetching the latest available pollutant information."
+            : error
+              ? "Air-quality data could not be retrieved. Please try again later."
+              : !aqi || aqi.aqi === null
+                ? "There is insufficient pollutant data to calculate an AQI estimate."
+                : `The dominant pollutant is ${
+                    aqi.dominant_pollutant ?? "not available"
+                  }. Use this estimate to inform your outdoor activity planning.`}
         </p>
+
+        {error && (
+          <p className="form-message">{error}</p>
+        )}
 
         <div className="aqi-footer">
           <span>
             <MapPin size={15} /> Chennai, India
           </span>
+
           <span>
-            <Clock size={15} /> Sample timestamp
+            <Clock size={15} /> {timestamp}
           </span>
         </div>
+
+        <p className="chart-note">
+          Source: {data?.source ?? "Open-Meteo Air Quality API"}.
+          This is a model-based estimate, not an official CPCB
+          monitoring-station reading.
+        </p>
       </div>
 
       <div className="aqi-visual">
         <div className="aqi-ring">
           <div className="ring-inner">
             <Wind size={39} />
-            <strong>156</strong>
+            <strong>{loading ? "..." : aqiValue}</strong>
             <span>AQI</span>
           </div>
         </div>
+
         <p>Air Quality Index</p>
-        <span className="sample-tag">DEMO VALUE – NOT LIVE</span>
+
+        <span className="sample-tag">
+          MODEL-BASED ESTIMATE
+        </span>
       </div>
     </section>
   );
@@ -446,48 +573,75 @@ function AQICard() {
 
 // -------------------- POLLUTANTS --------------------
 
-function PollutantSection() {
+function PollutantSection({
+  data,
+  loading
+}: {
+  data: AirQualityResponse | null;
+  loading: boolean;
+}) {
   return (
     <section className="section-block" id="air-quality">
       <div className="section-heading">
         <div>
           <h3>Pollutant Overview</h3>
-          <p>Illustrative pollutant readings for dashboard design</p>
+          <p>
+            Current pollutant concentrations from Open-Meteo
+          </p>
         </div>
 
-        <a href="#trends" className="text-button">
-          View trends <ArrowUpRight size={15} />
-        </a>
+        <span className="ai-tag">MODEL DATA</span>
       </div>
 
       <div className="pollutant-grid">
-        {pollutants.map((pollutant) => {
+        {pollutantConfig.map((pollutant) => {
           const Icon = pollutant.icon;
 
+          const value =
+            data?.current_pollutants?.[pollutant.key];
+
+          const status =
+            data?.sub_indices?.[pollutant.key]?.category ??
+            "Unavailable";
+
           return (
-            <div className="pollutant-card" key={pollutant.name}>
+            <div className="pollutant-card" key={pollutant.key}>
               <div className="pollutant-top">
                 <div className="pollutant-icon">
                   <Icon size={19} />
                 </div>
 
                 <span
-                  className={`status status-${pollutant.status.toLowerCase()}`}
+                  className={`status status-${status
+                    .toLowerCase()
+                    .replace(/\s+/g, "-")}`}
                 >
-                  {pollutant.status}
+                  {loading ? "Loading" : status}
                 </span>
               </div>
 
               <h4>{pollutant.name}</h4>
 
               <div className="pollutant-value">
-                {pollutant.value}
+                {loading
+                  ? "..."
+                  : value !== null && value !== undefined
+                    ? Number(value.toFixed(2))
+                    : "—"}
+
                 <span>{pollutant.unit}</span>
               </div>
             </div>
           );
         })}
       </div>
+
+      <p className="chart-note">
+        These are current model-based pollutant concentrations.
+        The displayed status is based on the corresponding
+        calculated sub-index, where sufficient historical data
+        is available.
+      </p>
     </section>
   );
 }
@@ -1078,11 +1232,10 @@ function SettingsSection() {
           <CheckCircle2 size={17} /> BreatheBetter AI frontend is active.
         </p>
         <p>
-          <CheckCircle2 size={17} /> Dashboard demo data is enabled.
+          <CheckCircle2 size={17} /> Live model-based air-quality data is enabled.
         </p>
         <p>
-          <Clock size={17} /> Live data connections are planned for the backend
-          phase.
+          <Clock size={17} /> Historical trends and other integrations are planned.
         </p>
       </div>
     </section>
@@ -1092,6 +1245,59 @@ function SettingsSection() {
 // -------------------- MAIN APP --------------------
 
 function App() {
+  const [airQuality, setAirQuality] =
+    useState<AirQualityResponse | null>(null);
+
+  const [airQualityLoading, setAirQualityLoading] =
+    useState(true);
+
+  const [airQualityError, setAirQualityError] =
+    useState("");
+
+  useEffect(() => {
+    let active = true;
+
+    async function fetchAirQuality() {
+      try {
+        setAirQualityLoading(true);
+        setAirQualityError("");
+
+        const response = await fetch(AIR_QUALITY_API_URL);
+
+        if (!response.ok) {
+          throw new Error(
+            `Air-quality API returned HTTP ${response.status}`
+          );
+        }
+
+        const result =
+          (await response.json()) as AirQualityResponse;
+
+        if (active) {
+          setAirQuality(result);
+        }
+      } catch (error) {
+        if (active) {
+          setAirQualityError(
+            error instanceof Error
+              ? error.message
+              : "Unable to fetch air-quality data."
+          );
+        }
+      } finally {
+        if (active) {
+          setAirQualityLoading(false);
+        }
+      }
+    }
+
+    fetchAirQuality();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   return (
     <div className="app-layout">
       <Sidebar />
@@ -1122,9 +1328,16 @@ function App() {
             </div>
           </div>
 
-          <AQICard />
+          <AQICard
+            data={airQuality}
+            loading={airQualityLoading}
+            error={airQualityError}
+          />
 
-          <PollutantSection />
+          <PollutantSection
+            data={airQuality}
+            loading={airQualityLoading}
+          />
 
           <div className="insights-grid">
             <TrendChart />
