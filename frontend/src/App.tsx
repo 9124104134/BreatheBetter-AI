@@ -75,6 +75,14 @@ type FamilyMember = {
   activity: string;
 };
 
+type NotificationItem = {
+  id: number;
+  title: string;
+  message: string;
+  time: string;
+  unread: boolean;
+};
+
 // -------------------- SIDEBAR --------------------
 
 function Sidebar() {
@@ -173,7 +181,6 @@ function Sidebar() {
             <span>Settings</span>
           </a>
 
-          {/* Clickable family profile */}
           <a
             href="#family"
             className="profile-mini profile-link"
@@ -195,10 +202,65 @@ function Sidebar() {
   );
 }
 
-// -------------------- HEADER --------------------
+// -------------------- HEADER + NOTIFICATIONS --------------------
 
 function Header() {
   const [location, setLocation] = useState("Chennai, India");
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+
+  const [notifications, setNotifications] = useState<NotificationItem[]>([
+    {
+      id: 1,
+      title: "Air quality reminder",
+      message:
+        "Check the latest AQI before planning outdoor activities.",
+      time: "Just now",
+      unread: true
+    },
+    {
+      id: 2,
+      title: "Indoor air tip",
+      message:
+        "Remember to use kitchen exhaust ventilation while cooking.",
+      time: "Earlier",
+      unread: true
+    },
+    {
+      id: 3,
+      title: "Daily planner",
+      message:
+        "Review your family's daily air-quality routine.",
+      time: "Today",
+      unread: false
+    }
+  ]);
+
+  const unreadCount = notifications.filter(
+    (notification) => notification.unread
+  ).length;
+
+  function markAllAsRead() {
+    setNotifications((current) =>
+      current.map((notification) => ({
+        ...notification,
+        unread: false
+      }))
+    );
+  }
+
+  function markAsRead(id: number) {
+    setNotifications((current) =>
+      current.map((notification) =>
+        notification.id === id
+          ? { ...notification, unread: false }
+          : notification
+      )
+    );
+  }
+
+  function clearNotifications() {
+    setNotifications([]);
+  }
 
   return (
     <header className="topbar">
@@ -218,14 +280,101 @@ function Header() {
           />
         </label>
 
-        <button
-          type="button"
-          className="icon-button"
-          aria-label="Notifications"
-        >
-          <Bell size={19} />
-          <span className="notification-dot" />
-        </button>
+        {/* Notifications */}
+        <div className="notification-wrapper">
+          <button
+            type="button"
+            className="icon-button notification-button"
+            aria-label={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ""}`}
+            aria-expanded={notificationsOpen}
+            onClick={() =>
+              setNotificationsOpen((previous) => !previous)
+            }
+          >
+            <Bell size={19} />
+
+            {unreadCount > 0 && (
+              <span className="notification-dot" />
+            )}
+          </button>
+
+          {notificationsOpen && (
+            <div className="notification-panel">
+              <div className="notification-header">
+                <div>
+                  <h3>Notifications</h3>
+                  <p>
+                    {unreadCount > 0
+                      ? `${unreadCount} unread notifications`
+                      : "You're all caught up"}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  className="notification-close"
+                  onClick={() => setNotificationsOpen(false)}
+                  aria-label="Close notifications"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="notification-actions">
+                <button
+                  type="button"
+                  onClick={markAllAsRead}
+                  disabled={unreadCount === 0}
+                >
+                  Mark all as read
+                </button>
+
+                <button
+                  type="button"
+                  onClick={clearNotifications}
+                  disabled={notifications.length === 0}
+                >
+                  Clear all
+                </button>
+              </div>
+
+              <div className="notification-list">
+                {notifications.length === 0 ? (
+                  <div className="notification-empty">
+                    <Bell size={25} />
+                    <strong>No notifications</strong>
+                    <p>You're all caught up!</p>
+                  </div>
+                ) : (
+                  notifications.map((notification) => (
+                    <button
+                      type="button"
+                      key={notification.id}
+                      className={`notification-item ${
+                        notification.unread ? "unread" : ""
+                      }`}
+                      onClick={() => markAsRead(notification.id)}
+                    >
+                      <span className="notification-icon">
+                        <Bell size={17} />
+                      </span>
+
+                      <span className="notification-content">
+                        <strong>{notification.title}</strong>
+                        <span>{notification.message}</span>
+                        <small>{notification.time}</small>
+                      </span>
+
+                      {notification.unread && (
+                        <span className="unread-indicator" />
+                      )}
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Clickable top-right profile */}
         <a
