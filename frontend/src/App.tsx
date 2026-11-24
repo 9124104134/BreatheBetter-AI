@@ -23,9 +23,7 @@ import {
   X,
   Send,
   Plus,
-  Leaf,
   Heart,
-  Search,
   Navigation,
   CheckCircle2
 } from "lucide-react";
@@ -39,6 +37,8 @@ import {
   Tooltip,
   ResponsiveContainer
 } from "recharts";
+
+// -------------------- SAMPLE DATA --------------------
 
 const trendData = [
   { time: "6 AM", aqi: 112 },
@@ -75,27 +75,52 @@ type FamilyMember = {
   activity: string;
 };
 
+// -------------------- SIDEBAR --------------------
+
 function Sidebar() {
   const [active, setActive] = useState("Overview");
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  function closeMobileMenu() {
+    setMobileOpen(false);
+  }
+
   return (
     <>
       <button
-  type="button"
-  className="mobile-menu"
-  onClick={() => setMobileOpen((previous) => !previous)}
-  aria-label="Toggle navigation"
-  aria-expanded={mobileOpen}
->
-  {mobileOpen ? <X /> : <Menu />}
-</button>
+        type="button"
+        className="mobile-menu"
+        onClick={() => setMobileOpen((previous) => !previous)}
+        aria-label="Toggle navigation"
+        aria-expanded={mobileOpen}
+      >
+        {mobileOpen ? <X size={23} /> : <Menu size={23} />}
+      </button>
+
+      {mobileOpen && (
+        <div
+          className="mobile-overlay"
+          onClick={closeMobileMenu}
+          aria-hidden="true"
+        />
+      )}
 
       <aside className={`sidebar ${mobileOpen ? "sidebar-open" : ""}`}>
-        <a className="brand" href="#overview">
-          <div className="brand-icon"><Wind size={23} /></div>
+        <a
+          className="brand"
+          href="#overview"
+          onClick={() => {
+            setActive("Overview");
+            closeMobileMenu();
+          }}
+        >
+          <div className="brand-icon">
+            <Wind size={23} />
+          </div>
           <div>
-            <h2>BreatheBetter<span>AI</span></h2>
+            <h2>
+              BreatheBetter<span>AI</span>
+            </h2>
             <p>SMART AIR. HEALTHY LIFE.</p>
           </div>
         </a>
@@ -110,10 +135,12 @@ function Sidebar() {
               <a
                 key={item.name}
                 href={item.href}
-                className={`nav-item ${active === item.name ? "active" : ""}`}
+                className={`nav-item ${
+                  active === item.name ? "active" : ""
+                }`}
                 onClick={() => {
                   setActive(item.name);
-                  setMobileOpen(false);
+                  closeMobileMenu();
                 }}
               >
                 <Icon size={19} />
@@ -127,33 +154,48 @@ function Sidebar() {
           <div className="upgrade-card">
             <Sparkles size={20} />
             <h4>Your air, understood.</h4>
-            <p>Get personalized insights for a healthier everyday.</p>
+            <p>
+              Get personalized insights for a healthier everyday.
+            </p>
           </div>
 
           <a
             href="#settings"
-            className={`nav-item ${active === "Settings" ? "active" : ""}`}
+            className={`nav-item ${
+              active === "Settings" ? "active" : ""
+            }`}
             onClick={() => {
               setActive("Settings");
-              setMobileOpen(false);
+              closeMobileMenu();
             }}
           >
             <Settings size={19} />
             <span>Settings</span>
           </a>
 
-          <div className="profile-mini">
+          {/* Clickable family profile */}
+          <a
+            href="#family"
+            className="profile-mini profile-link"
+            onClick={() => {
+              setActive("Family Profiles");
+              closeMobileMenu();
+            }}
+          >
             <div className="avatar">S</div>
             <div>
               <strong>My Family</strong>
-              <p>Personal dashboard</p>
+              <p>Open family profile</p>
             </div>
-          </div>
+            <ArrowUpRight size={16} />
+          </a>
         </div>
       </aside>
     </>
   );
 }
+
+// -------------------- HEADER --------------------
 
 function Header() {
   const [location, setLocation] = useState("Chennai, India");
@@ -176,16 +218,30 @@ function Header() {
           />
         </label>
 
-        <button className="icon-button" aria-label="Notifications">
+        <button
+          type="button"
+          className="icon-button"
+          aria-label="Notifications"
+        >
           <Bell size={19} />
           <span className="notification-dot" />
         </button>
 
-        <div className="avatar">S</div>
+        {/* Clickable top-right profile */}
+        <a
+          href="#family"
+          className="avatar profile-avatar"
+          aria-label="Open my family profile"
+          title="Open My Family"
+        >
+          S
+        </a>
       </div>
     </header>
   );
 }
+
+// -------------------- AQI OVERVIEW --------------------
 
 function AQICard() {
   return (
@@ -215,8 +271,12 @@ function AQICard() {
         </p>
 
         <div className="aqi-footer">
-          <span><MapPin size={15} /> Chennai, India</span>
-          <span><Clock size={15} /> Sample timestamp</span>
+          <span>
+            <MapPin size={15} /> Chennai, India
+          </span>
+          <span>
+            <Clock size={15} /> Sample timestamp
+          </span>
         </div>
       </div>
 
@@ -235,6 +295,8 @@ function AQICard() {
   );
 }
 
+// -------------------- POLLUTANTS --------------------
+
 function PollutantSection() {
   return (
     <section className="section-block" id="air-quality">
@@ -243,6 +305,7 @@ function PollutantSection() {
           <h3>Pollutant Overview</h3>
           <p>Illustrative pollutant readings for dashboard design</p>
         </div>
+
         <a href="#trends" className="text-button">
           View trends <ArrowUpRight size={15} />
         </a>
@@ -255,8 +318,13 @@ function PollutantSection() {
           return (
             <div className="pollutant-card" key={pollutant.name}>
               <div className="pollutant-top">
-                <div className="pollutant-icon"><Icon size={19} /></div>
-                <span className={`status status-${pollutant.status.toLowerCase()}`}>
+                <div className="pollutant-icon">
+                  <Icon size={19} />
+                </div>
+
+                <span
+                  className={`status status-${pollutant.status.toLowerCase()}`}
+                >
                   {pollutant.status}
                 </span>
               </div>
@@ -275,6 +343,8 @@ function PollutantSection() {
   );
 }
 
+// -------------------- TREND CHART --------------------
+
 function TrendChart() {
   return (
     <section className="panel trend-panel" id="trends">
@@ -283,6 +353,7 @@ function TrendChart() {
           <h3>Air Quality Trends</h3>
           <p>Illustrative AQI pattern throughout the day</p>
         </div>
+
         <span className="chart-period">Today</span>
       </div>
 
@@ -290,9 +361,23 @@ function TrendChart() {
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={trendData}>
             <defs>
-              <linearGradient id="aqiGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#269B79" stopOpacity={0.25} />
-                <stop offset="95%" stopColor="#269B79" stopOpacity={0.01} />
+              <linearGradient
+                id="aqiGradient"
+                x1="0"
+                y1="0"
+                x2="0"
+                y2="1"
+              >
+                <stop
+                  offset="0%"
+                  stopColor="#269B79"
+                  stopOpacity={0.25}
+                />
+                <stop
+                  offset="95%"
+                  stopColor="#269B79"
+                  stopOpacity={0.01}
+                />
               </linearGradient>
             </defs>
 
@@ -336,19 +421,26 @@ function TrendChart() {
   );
 }
 
+// -------------------- RECOMMENDATIONS --------------------
+
 function Recommendations() {
   return (
     <section className="panel recommendations" id="planner">
       <div className="section-heading">
         <div>
-          <h3><Sparkles size={19} /> AI Daily Insights</h3>
+          <h3>
+            <Sparkles size={19} /> AI Daily Insights
+          </h3>
           <p>Example guidance for your family</p>
         </div>
+
         <span className="ai-tag">AI CONCEPT</span>
       </div>
 
       <a href="#planner-details" className="recommendation-item">
-        <div className="recommendation-icon green"><Sun size={19} /></div>
+        <div className="recommendation-icon green">
+          <Sun size={19} />
+        </div>
         <div>
           <strong>Morning activity</strong>
           <p>Check the latest AQI before planning outdoor exercise.</p>
@@ -357,7 +449,9 @@ function Recommendations() {
       </a>
 
       <a href="#family" className="recommendation-item">
-        <div className="recommendation-icon orange"><ShieldCheck size={19} /></div>
+        <div className="recommendation-icon orange">
+          <ShieldCheck size={19} />
+        </div>
         <div>
           <strong>Family protection</strong>
           <p>Explore air-quality planning for your family.</p>
@@ -365,8 +459,10 @@ function Recommendations() {
         <ArrowUpRight size={16} />
       </a>
 
-      <a href="#indoor" className="recommendation-item">
-        <div className="recommendation-icon blue"><Droplets size={19} /></div>
+      <a href="#indoor-details" className="recommendation-item">
+        <div className="recommendation-icon blue">
+          <Droplets size={19} />
+        </div>
         <div>
           <strong>Indoor air care</strong>
           <p>Explore practical ways to improve indoor air.</p>
@@ -383,14 +479,19 @@ function Recommendations() {
   );
 }
 
+// -------------------- DAILY PLANNER --------------------
+
 function DailyPlanner() {
   return (
     <section className="section-block panel" id="planner-details">
       <div className="section-heading">
         <div>
-          <h3><CalendarDays size={19} /> Daily Activity Planner</h3>
+          <h3>
+            <CalendarDays size={19} /> Daily Activity Planner
+          </h3>
           <p>Example routine ideas for days with elevated pollution</p>
         </div>
+
         <span className="ai-tag">SAMPLE PLAN</span>
       </div>
 
@@ -410,7 +511,7 @@ function DailyPlanner() {
         </div>
 
         <div className="routine-card">
-          <MoonIcon />
+          <Clock size={22} />
           <span>Evening</span>
           <strong>Review your routine</strong>
           <p>Check air quality again before planning tomorrow.</p>
@@ -420,9 +521,7 @@ function DailyPlanner() {
   );
 }
 
-function MoonIcon() {
-  return <Clock size={22} />;
-}
+// -------------------- QUICK TIPS --------------------
 
 function QuickTips() {
   return (
@@ -437,19 +536,25 @@ function QuickTips() {
 
       <div className="tips-grid">
         <div className="tip-item">
-          <div className="tip-icon"><Home size={21} /></div>
+          <div className="tip-icon">
+            <Home size={21} />
+          </div>
           <strong>Reduce indoor smoke</strong>
           <p>Use kitchen exhaust ventilation while cooking.</p>
         </div>
 
         <div className="tip-item">
-          <div className="tip-icon"><Wind size={21} /></div>
+          <div className="tip-icon">
+            <Wind size={21} />
+          </div>
           <strong>Filter your air</strong>
           <p>Consider a suitable HEPA air purifier.</p>
         </div>
 
         <div className="tip-item">
-          <div className="tip-icon"><Activity size={21} /></div>
+          <div className="tip-icon">
+            <Activity size={21} />
+          </div>
           <strong>Check air quality</strong>
           <p>Review local pollution levels before opening windows.</p>
         </div>
@@ -457,6 +562,8 @@ function QuickTips() {
     </section>
   );
 }
+
+// -------------------- FAMILY PROFILES --------------------
 
 function FamilyProfiles() {
   const [members, setMembers] = useState<FamilyMember[]>([
@@ -510,16 +617,21 @@ function FamilyProfiles() {
     <section className="section-block" id="family">
       <div className="section-heading">
         <div>
-          <h3><Users size={19} /> Family Profiles</h3>
+          <h3>
+            <Users size={19} /> Family Profiles
+          </h3>
           <p>Manage example family profiles for personalized planning</p>
         </div>
+
         <span className="ai-tag">LOCAL DEMO</span>
       </div>
 
       <div className="family-grid">
         {members.map((member) => (
           <div className="family-card" key={member.id}>
-            <div className="family-avatar"><Heart size={20} /></div>
+            <div className="family-avatar">
+              <Heart size={20} />
+            </div>
             <div>
               <strong>{member.name}</strong>
               <span>{member.group}</span>
@@ -555,34 +667,40 @@ function FamilyProfiles() {
       {message && <p className="form-message">{message}</p>}
 
       <p className="chart-note">
-        Demo profiles are held in temporary page state and are not saved to a database.
-        Avoid entering sensitive personal or medical information.
+        Demo profiles are held in temporary page state and are not saved to a
+        database. Avoid entering sensitive personal or medical information.
       </p>
     </section>
   );
 }
+
+// -------------------- INDOOR AIR --------------------
 
 function IndoorAir() {
   const tips = [
     {
       icon: Home,
       title: "Reduce indoor smoke",
-      description: "Use a kitchen exhaust fan while cooking and avoid indoor smoking."
+      description:
+        "Use a kitchen exhaust fan while cooking and avoid indoor smoking."
     },
     {
       icon: Wind,
       title: "Improve filtration",
-      description: "Consider a correctly sized HEPA air purifier and maintain its filters."
+      description:
+        "Consider a correctly sized HEPA air purifier and maintain its filters."
     },
     {
       icon: Droplets,
       title: "Control dust",
-      description: "Use damp dusting and regular cleaning to reduce settled dust."
+      description:
+        "Use damp dusting and regular cleaning to reduce settled dust."
     },
     {
       icon: Cloud,
       title: "Ventilate thoughtfully",
-      description: "Ventilate when outdoor air quality is better, rather than assuming windows should always be open."
+      description:
+        "Ventilate when outdoor air quality is better, rather than assuming windows should always be open."
     }
   ];
 
@@ -590,9 +708,12 @@ function IndoorAir() {
     <section className="section-block" id="indoor-details">
       <div className="section-heading">
         <div>
-          <h3><Home size={19} /> Indoor Air Optimization</h3>
+          <h3>
+            <Home size={19} /> Indoor Air Optimization
+          </h3>
           <p>Practical ways to support a cleaner indoor environment</p>
         </div>
+
         <span className="ai-tag">HOME GUIDE</span>
       </div>
 
@@ -602,7 +723,9 @@ function IndoorAir() {
 
           return (
             <div className="indoor-card" key={tip.title}>
-              <div className="tip-icon"><Icon size={22} /></div>
+              <div className="tip-icon">
+                <Icon size={22} />
+              </div>
               <h4>{tip.title}</h4>
               <p>{tip.description}</p>
             </div>
@@ -613,6 +736,8 @@ function IndoorAir() {
   );
 }
 
+// -------------------- ROUTE PLANNER --------------------
+
 function RoutePlanner() {
   const [start, setStart] = useState("Chennai");
   const [destination, setDestination] = useState("");
@@ -622,7 +747,9 @@ function RoutePlanner() {
     e.preventDefault();
 
     if (!start.trim() || !destination.trim()) {
-      setMessage("Please enter both your starting point and destination.");
+      setMessage(
+        "Please enter both your starting point and destination."
+      );
       return;
     }
 
@@ -635,14 +762,19 @@ function RoutePlanner() {
     <section className="section-block panel" id="routes">
       <div className="section-heading">
         <div>
-          <h3><Map size={19} /> Low-Exposure Route Planner</h3>
+          <h3>
+            <Map size={19} /> Low-Exposure Route Planner
+          </h3>
           <p>Plan journeys with air quality in mind</p>
         </div>
+
         <span className="ai-tag">PREVIEW</span>
       </div>
 
       <div className="route-intro">
-        <div className="route-icon"><Navigation size={25} /></div>
+        <div className="route-icon">
+          <Navigation size={25} />
+        </div>
         <div>
           <strong>Plan a more informed journey</strong>
           <p>Enter your locations to prepare a route request.</p>
@@ -681,15 +813,19 @@ function RoutePlanner() {
       )}
 
       <p className="chart-note">
-        This is a frontend preview. It does not calculate actual routes or live pollution levels.
-        The shortest route is not necessarily the cleanest route.
+        This is a frontend preview. It does not calculate actual routes or live
+        pollution levels. The shortest route is not necessarily the cleanest
+        route.
       </p>
     </section>
   );
 }
 
+// -------------------- AI ASSISTANT --------------------
+
 function AIAssistant() {
   const [question, setQuestion] = useState("");
+
   const [messages, setMessages] = useState([
     {
       question: "",
@@ -721,9 +857,12 @@ function AIAssistant() {
     <section className="section-block panel" id="assistant">
       <div className="section-heading">
         <div>
-          <h3><MessageCircle size={19} /> BreatheBetter AI Assistant</h3>
+          <h3>
+            <MessageCircle size={19} /> BreatheBetter AI Assistant
+          </h3>
           <p>Your personal air-quality guidance companion</p>
         </div>
+
         <span className="ai-tag">AI PREVIEW</span>
       </div>
 
@@ -738,7 +877,9 @@ function AIAssistant() {
             )}
 
             <div className="assistant-message">
-              <div className="assistant-avatar"><Sparkles size={18} /></div>
+              <div className="assistant-avatar">
+                <Sparkles size={18} />
+              </div>
               <div>
                 <strong>BreatheBetter AI</strong>
                 <p>{message.answer}</p>
@@ -755,35 +896,51 @@ function AIAssistant() {
           placeholder="Ask about air quality or healthy routines..."
           aria-label="Ask the AI assistant"
         />
+
         <button type="submit" className="primary-button">
           <Send size={17} /> Send
         </button>
       </form>
 
       <p className="chart-note">
-        Preview responses only. Gemini integration will be added through the backend.
+        Preview responses only. Gemini integration will be added through the
+        backend.
       </p>
     </section>
   );
 }
+
+// -------------------- SETTINGS --------------------
 
 function SettingsSection() {
   return (
     <section className="section-block panel" id="settings">
       <div className="section-heading">
         <div>
-          <h3><Settings size={19} /> Settings</h3>
+          <h3>
+            <Settings size={19} /> Settings
+          </h3>
           <p>Application information and preferences</p>
         </div>
       </div>
+
       <div className="settings-content">
-        <p><CheckCircle2 size={17} /> BreatheBetter AI frontend is active.</p>
-        <p><CheckCircle2 size={17} /> Dashboard demo data is enabled.</p>
-        <p><Clock size={17} /> Live data connections are planned for the backend phase.</p>
+        <p>
+          <CheckCircle2 size={17} /> BreatheBetter AI frontend is active.
+        </p>
+        <p>
+          <CheckCircle2 size={17} /> Dashboard demo data is enabled.
+        </p>
+        <p>
+          <Clock size={17} /> Live data connections are planned for the backend
+          phase.
+        </p>
       </div>
     </section>
   );
 }
+
+// -------------------- MAIN APP --------------------
 
 function App() {
   return (
@@ -796,9 +953,15 @@ function App() {
         <div className="dashboard-container">
           <div className="welcome-section">
             <div>
-              <span className="eyebrow">YOUR PERSONAL AIR COMPANION</span>
-              <h1>Breathe better, live better. <span>🌿</span></h1>
-              <p>Understand your environment. Make healthier everyday choices.</p>
+              <span className="eyebrow">
+                YOUR PERSONAL AIR COMPANION
+              </span>
+              <h1>
+                Breathe better, live better. <span>🌿</span>
+              </h1>
+              <p>
+                Understand your environment. Make healthier everyday choices.
+              </p>
             </div>
 
             <div className="weather-pill">
@@ -835,7 +998,9 @@ function App() {
 
           <footer className="footer">
             <span>© 2026 BreatheBetter AI</span>
-            <span>Built for healthier urban living <Wind size={14} /></span>
+            <span>
+              Built for healthier urban living <Wind size={14} />
+            </span>
           </footer>
         </div>
       </main>
@@ -844,4 +1009,3 @@ function App() {
 }
 
 export default App;
-
