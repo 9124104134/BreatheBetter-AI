@@ -18,12 +18,17 @@ app = FastAPI(
     version="2.1.0"
 )
 
+# --------------------------------------------------
+# CORS CONFIGURATION
+# --------------------------------------------------
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5173",
         "https://breathe-better-ai-frontend.vercel.app",
-        "https://breathe-better-ai-frontend-dha7rl8qz-sai-shruthi-v.vercel.app"
+        "https://breathe-better-ai-frontend-dha7rl8qz-sai-shruthi-v.vercel.app",
+        "https://breathe-better-ai-frontend-f4wo1o8oe-sai-shruthi-v.vercel.app"
     ],
     allow_credentials=True,
     allow_methods=["*"],
