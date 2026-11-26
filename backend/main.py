@@ -18,6 +18,7 @@ app = FastAPI(
     version="2.1.0"
 )
 
+
 # --------------------------------------------------
 # CORS CONFIGURATION
 # --------------------------------------------------
@@ -27,9 +28,11 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:5173",
         "https://breathe-better-ai-frontend.vercel.app",
-        "https://breathe-better-ai-frontend-dha7rl8qz-sai-shruthi-v.vercel.app",
-        "https://breathe-better-ai-frontend-f4wo1o8oe-sai-shruthi-v.vercel.app"
     ],
+    allow_origin_regex=(
+        r"https://breathe-better-ai-frontend-[a-z0-9]+-"
+        r"sai-shruthi-v\.vercel\.app"
+    ),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -88,6 +91,7 @@ AQI_BREAKPOINTS = {
     ],
 }
 
+
 SEVERE_THRESHOLDS = {
     "pm2_5": 250,
     "pm10": 430,
@@ -96,6 +100,7 @@ SEVERE_THRESHOLDS = {
     "carbon_monoxide": 34.0,
     "ozone": 748,
 }
+
 
 POLLUTANT_NAMES = {
     "pm2_5": "PM2.5",
@@ -106,6 +111,7 @@ POLLUTANT_NAMES = {
     "ozone": "Ozone",
 }
 
+
 POLLUTANT_UNITS = {
     "pm2_5": "µg/m³",
     "pm10": "µg/m³",
@@ -114,6 +120,7 @@ POLLUTANT_UNITS = {
     "sulphur_dioxide": "µg/m³",
     "ozone": "µg/m³",
 }
+
 
 POLLUTANTS = list(POLLUTANT_NAMES.keys())
 
