@@ -588,9 +588,7 @@ function AQICard({
                   }. Use this estimate to inform your outdoor activity planning.`}
         </p>
 
-        {error && (
-          <p className="form-message">{error}</p>
-        )}
+        {error && <p className="form-message">{error}</p>}
 
         <div className="aqi-footer">
           <span>
@@ -832,16 +830,12 @@ function TrendChart({
             </div>
 
             <div>
-              <strong>
-                {Math.min(...validValues)}
-              </strong>
+              <strong>{Math.min(...validValues)}</strong>
               <span>Lowest forecast AQI</span>
             </div>
 
             <div>
-              <strong>
-                {Math.max(...validValues)}
-              </strong>
+              <strong>{Math.max(...validValues)}</strong>
               <span>Highest forecast AQI</span>
             </div>
           </div>
@@ -1401,75 +1395,82 @@ function App() {
   // -------------------- CURRENT AQI FETCH --------------------
 
   useEffect(() => {
+    const controller = new AbortController();
     let active = true;
+
+    const timeoutId = window.setTimeout(() => {
+      controller.abort();
+    }, 15000);
 
     async function fetchAirQuality() {
       setAirQualityLoading(true);
       setAirQualityError("");
 
-      let lastError = "Unable to fetch air-quality data.";
+      try {
+        const response = await fetch(AIR_QUALITY_API_URL, {
+          signal: controller.signal
+        });
 
-      for (let attempt = 1; attempt <= 3; attempt++) {
+        if (!response.ok) {
+          throw new Error(
+            `Air-quality API returned HTTP ${response.status}`
+          );
+        }
+
+        const result =
+          (await response.json()) as AirQualityResponse;
+
+        if (!result.aqi_estimate || !result.current_pollutants) {
+          throw new Error(
+            "The API returned an unexpected response."
+          );
+        }
+
+        if (active) {
+          setAirQuality(result);
+          setAirQualityError("");
+        }
+      } catch (error) {
         if (!active) return;
 
-        try {
-          const response = await fetch(AIR_QUALITY_API_URL);
-
-          if (!response.ok) {
-            throw new Error(
-              `Air-quality API returned HTTP ${response.status}`
-            );
-          }
-
-          const result =
-            (await response.json()) as AirQualityResponse;
-
-          if (!result.aqi_estimate || !result.current_pollutants) {
-            throw new Error("The API returned an unexpected response.");
-          }
-
-          if (active) {
-            setAirQuality(result);
-            setAirQualityError("");
-          }
-
-          return;
-        } catch (error) {
-          lastError =
+        if (controller.signal.aborted) {
+          setAirQualityError(
+            "Air-quality request timed out. Please try refreshing."
+          );
+        } else {
+          setAirQualityError(
             error instanceof Error
-              ? error.message
-              : "Unable to fetch air-quality data.";
-
-          if (attempt < 3 && active) {
-            await new Promise((resolve) =>
-              setTimeout(resolve, 5000)
-            );
-          }
+              ? `${error.message}. Please try refreshing the data.`
+              : "Unable to fetch air-quality data. Please try again."
+          );
         }
-      }
+      } finally {
+        window.clearTimeout(timeoutId);
 
-      if (active) {
-        setAirQualityError(
-          `${lastError}. Please try refreshing the data.`
-        );
+        if (active) {
+          setAirQualityLoading(false);
+        }
       }
     }
 
-    fetchAirQuality().finally(() => {
-      if (active) {
-        setAirQualityLoading(false);
-      }
-    });
+    fetchAirQuality();
 
     return () => {
       active = false;
+      window.clearTimeout(timeoutId);
+      controller.abort();
     };
   }, [refreshKey]);
 
   // -------------------- 24-HOUR FORECAST FETCH --------------------
 
   useEffect(() => {
+    const controller = new AbortController();
     let active = true;
+
+    const timeoutId = window.setTimeout(() => {
+      controller.abort();
+    }, 15000);
 
     async function fetchForecast() {
       setForecastLoading(true);
@@ -1477,7 +1478,10 @@ function App() {
 
       try {
         const response = await fetch(
-          AIR_QUALITY_FORECAST_API_URL
+          AIR_QUALITY_FORECAST_API_URL,
+          {
+            signal: controller.signal
+          }
         );
 
         if (!response.ok) {
@@ -1500,7 +1504,13 @@ function App() {
           setForecastError("");
         }
       } catch (error) {
-        if (active) {
+        if (!active) return;
+
+        if (controller.signal.aborted) {
+          setForecastError(
+            "Forecast request timed out. Please reload the dashboard."
+          );
+        } else {
           setForecastError(
             error instanceof Error
               ? error.message
@@ -1508,6 +1518,8 @@ function App() {
           );
         }
       } finally {
+        window.clearTimeout(timeoutId);
+
         if (active) {
           setForecastLoading(false);
         }
@@ -1518,6 +1530,8 @@ function App() {
 
     return () => {
       active = false;
+      window.clearTimeout(timeoutId);
+      controller.abort();
     };
   }, []);
 
