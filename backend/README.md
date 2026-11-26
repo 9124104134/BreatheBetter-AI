@@ -76,7 +76,7 @@ The frontend uses these responses to display the upcoming 24-hour air-quality tr
 Clone the repository:
 
 ```bash
-git clone https://github.com/YOUR_GITHUB_USERNAME/BreatheBetter-AI.git
+git clone https://github.com/9124104134/BreatheBetter-AI/edit/main/backend/README.md
 cd BreatheBetter-AI/backend
 ```
 
